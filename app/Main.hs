@@ -1,6 +1,9 @@
 module Main where
 
+import Control.Concurrent
+
 import Client (runClient)
+import Server (runServer)
 
 main :: IO ()
-main = runClient
+main = (forkIO runServer) >> runClient

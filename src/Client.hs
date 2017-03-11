@@ -2,7 +2,7 @@ module Client
   (runClient
   ) where
 
-import Control.Monad (forever)
+import Control.Monad
 
 runClient :: IO ()
 runClient = forever $ do
