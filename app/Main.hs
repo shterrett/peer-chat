@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Client (runClient)
 
 main :: IO ()
-main = someFunc
+main = runClient
