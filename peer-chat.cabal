@@ -19,9 +19,10 @@ library
                      , Server
                      , ConcurrentUtils
   build-depends:       base >= 4.7 && < 5
+                     , bytestring
                      , concurrency
-                     , stm
                      , network
+                     , stm
   default-language:    Haskell2010
 
 executable peer-chat-exe

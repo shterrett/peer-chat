@@ -3,7 +3,14 @@ module Client
   ) where
 
 import Control.Monad
+import Network
+import System.IO
 
 runClient :: IO ()
-runClient = forever $ do
-  getLine >>= putStrLn
+runClient =
+    connectTo "localhost" (PortNumber 44444) >>= (\handle ->
+        forever $ getLine >>=
+                  (hPutStrLn handle) >>
+                  (hGetLine handle) >>=
+                  putStrLn
+    )

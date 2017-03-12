@@ -3,8 +3,8 @@ module Server
   ) where
 
 import ConcurrentUtils
-import Network
 import Control.Monad
+import Network
 import System.IO
 
 port :: Int
