@@ -7,33 +7,34 @@ import Control.Monad.STM
 import Network
 import System.IO
 import Control.Concurrent.STM.TVar
+import Models
 import Commands (Command(Message, Add, Switch, Remove, Quit), command)
 
-type CurrentServer = TVar (Maybe (IO Handle))
-
-runClient :: IO ()
-runClient = do
-    server <- newTVarIO Nothing
+runClient :: CurrentConnection -> IO ()
+runClient conn = do
     forever $ getLine >>=
-              (handleCommand server . command) >>
-              getMessage server
+              (handleCommand conn . command)
 
 
-handleCommand :: CurrentServer -> Either String Command -> IO ()
-handleCommand server (Left e) = putStrLn $ show e
-handleCommand server (Right c) = handle c
-  where handle (Message s) = sendMessage server s
-        handle (Add c) = putStrLn $ show c
-        handle (Switch name) = putStrLn $ show name
-        handle (Remove name) = putStrLn $ show name
+handleCommand :: CurrentConnection -> Either String Command -> IO ()
+handleCommand conn (Left e) = putStrLn e
+handleCommand conn (Right c) = handle c
+  where handle (Message s) = sendMessage conn s
+        handle (Add c) = connectToServer conn c
+        handle (Switch name) = putStrLn name
+        handle (Remove name) = putStrLn name
         handle Quit = putStrLn "quit"
 
-sendMessage :: CurrentServer -> String -> IO ()
-sendMessage server message = withServer server $ (flip hPutStrLn) message
+sendMessage :: CurrentConnection -> String -> IO ()
+sendMessage conn message = withServer conn $ (flip hPutStrLn) message
 
-getMessage :: CurrentServer -> IO ()
-getMessage server = withServer server $ putStrLn <=< hGetLine
+getMessage :: CurrentConnection -> IO ()
+getMessage conn = withServer conn $ putStrLn <=< hGetLine
 
-withServer :: CurrentServer -> (Handle -> IO ()) -> IO ()
-withServer s action = (atomically $ readTVar s) >>=
-                      mapM_ (liftM action)
+connectToServer :: CurrentConnection -> Connection -> IO ()
+connectToServer conn (Connection { addr = a, port = p }) =
+    newServer >>= atomically . writeTVar conn . Just
+  where newServer = connectTo a p
+
+withServer :: CurrentConnection -> (Handle -> IO ()) -> IO ()
+withServer s action = (atomically $ readTVar s) >>= mapM_ action
