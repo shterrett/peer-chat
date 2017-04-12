@@ -15,7 +15,9 @@ data Connection =
 
 type CurrentConnection = TVar (Maybe Handle)
 
-type ConnectionDB = TVar (Map.Map ConnectionName Connection)
+type ConnectionMap = Map.Map ConnectionName Connection
+
+type ConnectionDB = TVar ConnectionMap
 
 defaultPort :: PortID
 defaultPort = PortNumber 90909

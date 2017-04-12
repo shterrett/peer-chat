@@ -25,25 +25,21 @@ handleCommand conn connDB (Right c) = handle c
   where handle (Message s) = sendMessage conn s
         handle (Add c) = addConnection connDB c >> connectToServer conn c
         handle (Switch name) = switchConnection connDB conn name
-        handle (Remove name) = removeConnection connDB conn name
+        handle (Remove name) = removeConnection connDB name
         handle Quit = exitSuccess
 
 sendMessage :: CurrentConnection -> String -> IO ()
 sendMessage conn message = withServer conn $ (flip hPutStrLn) message
 
 addConnection :: ConnectionDB -> Connection -> IO ()
-addConnection db new = atomically $ insertConnection db new
-  where insertConnection db new = readTVar db >>= updateDB db new
-        updateDB db new map = writeTVar db $ Map.insert (name new) new map
+addConnection db new = updateConnectionDB db (Map.insert (name new) new)
+
+removeConnection :: ConnectionDB -> ConnectionName -> IO ()
+removeConnection db name = updateConnectionDB db (Map.delete name)
 
 switchConnection :: ConnectionDB -> CurrentConnection -> ConnectionName -> IO ()
 switchConnection db curr name = (newConn db name) >>= mapM_ (connectToServer curr)
-  where newConn db name = atomically (fmap (Map.lookup name) (readTVar db))
-
-removeConnection :: ConnectionDB -> CurrentConnection -> ConnectionName -> IO ()
-removeConnection db curr name = atomically $ deleteConnection db name
-  where deleteConnection db name = readTVar db >>= updateDB db name
-        updateDB db name map = writeTVar db $ Map.delete name map
+  where newConn db name = atomically (Map.lookup name <$> readTVar db)
 
 connectToServer :: CurrentConnection -> Connection -> IO ()
 connectToServer conn (Connection { addr = a, port = p }) =
@@ -52,3 +48,6 @@ connectToServer conn (Connection { addr = a, port = p }) =
 
 withServer :: CurrentConnection -> (Handle -> IO ()) -> IO ()
 withServer s action = (atomically $ readTVar s) >>= mapM_ action
+
+updateConnectionDB :: ConnectionDB -> (ConnectionMap -> ConnectionMap) -> IO ()
+updateConnectionDB db f = atomically $ f <$> readTVar db >>= writeTVar db
