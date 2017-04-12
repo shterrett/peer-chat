@@ -8,6 +8,7 @@ import Control.Monad.STM
 import qualified Data.Map.Strict as Map
 import Network
 import System.IO
+import System.Exit
 import Control.Concurrent.STM.TVar
 import Models
 import Commands (Command(Message, Add, Switch, Remove, Quit), command)
@@ -19,13 +20,13 @@ runClient conn db = do
 
 
 handleCommand :: CurrentConnection -> ConnectionDB -> Either String Command -> IO ()
-handleCommand conn _ (Left e) = putStrLn e
+handleCommand _ _ (Left e) = putStrLn e
 handleCommand conn connDB (Right c) = handle c
   where handle (Message s) = sendMessage conn s
         handle (Add c) = addConnection connDB c >> connectToServer conn c
         handle (Switch name) = switchConnection connDB conn name
         handle (Remove name) = removeConnection connDB conn name
-        handle Quit = putStrLn "quit"
+        handle Quit = exitSuccess
 
 sendMessage :: CurrentConnection -> String -> IO ()
 sendMessage conn message = withServer conn $ (flip hPutStrLn) message
