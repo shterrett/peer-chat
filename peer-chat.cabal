@@ -19,6 +19,7 @@ library
                      , Server
                      , ConcurrentUtils
                      , Commands
+                     , Messages
                      , Models
   build-depends:       base >= 4.7 && < 5
                      , bytestring
@@ -27,6 +28,7 @@ library
                      , network
                      , parsec
                      , stm
+                     , uuid
   default-language:    Haskell2010
 
 executable peer-chat-exe
@@ -36,6 +38,7 @@ executable peer-chat-exe
   build-depends:       base
                      , containers
                      , stm
+                     , uuid
                      , peer-chat
   default-language:    Haskell2010
 
@@ -48,6 +51,9 @@ test-suite peer-chat-test
                      , hspec
                      , network
                      , parsec
+                     , random
+                     , uuid
+                     , QuickCheck
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

@@ -76,8 +76,9 @@ connectParser =
         short = try $ string "c"
         error = "Expecting name ip_address:port"
         name = manyTill Pc.alphaNum Pc.space
+        conn = (\name ip port -> Connection name ip port Nothing)
     in
-      fmap Add $ (fmap Connection $ (long <|> short)
+      fmap Add $ (fmap conn $ (long <|> short)
                         >> (Pc.space <?> error)
                         >> (name <?> error))
                         <*> (ipParser <?> error)

@@ -40,6 +40,7 @@ spec = do
             (Right (Add $ Connection { name = "friend"
                              , addr = "192.168.2.42"
                              , port = PortNumber 12345
+                             , serverId = Nothing
                              }))
         it "creates a connection with the default port" $ do
           command "/connect friend 192.168.2.42"
@@ -47,6 +48,7 @@ spec = do
             (Right (Add $ Connection { name = "friend"
                              , addr = "192.168.2.42"
                              , port = defaultPort
+                             , serverId = Nothing
                              }))
         it "creates a connection with c" $ do
           command "/c friend 192.168.2.42:12345"
@@ -54,6 +56,7 @@ spec = do
             (Right (Add $ Connection { name = "friend"
                              , addr = "192.168.2.42"
                              , port = PortNumber 12345
+                             , serverId = Nothing
                              }))
       describe "Unrecognized command" $ do
         it "returns an error for an unrecognized command" $ do

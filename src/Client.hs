@@ -13,8 +13,8 @@ import Control.Concurrent.STM.TVar
 import Models
 import Commands (Command(Message, Add, Switch, Remove, Quit), command)
 
-runClient :: CurrentConnection -> ConnectionDB -> IO ()
-runClient conn db = do
+runClient :: ServerId -> CurrentConnection -> ConnectionDB -> IO ()
+runClient selfId conn db = do
     forever $ getLine >>=
               (handleCommand conn db . command)
 

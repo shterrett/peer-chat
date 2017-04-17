@@ -8,8 +8,8 @@ import Network
 import System.IO
 import Models
 
-runServer :: CurrentConnection -> ConnectionDB -> IO ()
-runServer _ _ = do
+runServer :: ServerId -> CurrentConnection -> ConnectionDB -> IO ()
+runServer _ _ _ = do
   sock <- listenOn defaultPort
   forever $ do
      (handle, host, port) <- accept sock
