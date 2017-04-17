@@ -12,24 +12,25 @@ import System.Exit
 import Control.Concurrent.STM.TVar
 import Models
 import Commands (Command(Message, Add, Switch, Remove, Quit), command)
+import Messages (encode)
 
 runClient :: ServerId -> CurrentConnection -> ConnectionDB -> IO ()
 runClient selfId conn db = do
     forever $ getLine >>=
-              (handleCommand conn db . command)
+              (handleCommand selfId conn db . command)
 
 
-handleCommand :: CurrentConnection -> ConnectionDB -> Either String Command -> IO ()
-handleCommand _ _ (Left e) = putStrLn e
-handleCommand conn connDB (Right c) = handle c
-  where handle (Message s) = sendMessage conn s
+handleCommand :: ServerId -> CurrentConnection -> ConnectionDB -> Either String Command -> IO ()
+handleCommand _ _ _ (Left e) = putStrLn e
+handleCommand selfId conn connDB (Right c) = handle c
+  where handle (Message s) = sendMessage conn (Msg selfId s)
         handle (Add c) = addConnection connDB c >> connectToServer conn c
         handle (Switch name) = switchConnection connDB conn name
         handle (Remove name) = removeConnection connDB name
         handle Quit = exitSuccess
 
-sendMessage :: CurrentConnection -> String -> IO ()
-sendMessage conn message = withServer conn $ (flip hPutStrLn) message
+sendMessage :: CurrentConnection -> Payload -> IO ()
+sendMessage conn payload = withServer conn $ (flip hPutStrLn) (encode payload)
 
 addConnection :: ConnectionDB -> Connection -> IO ()
 addConnection db new = updateConnectionDB db (Map.insert (name new) new)
