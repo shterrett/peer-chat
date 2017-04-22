@@ -12,24 +12,23 @@ import System.Exit
 import Control.Concurrent.STM.TVar
 import Models
 import Commands (Command(Message, Add, Switch, Remove, Quit), command)
-import Messages (encode)
+import Messages (encode, decode)
 
 runClient :: ServerId -> CurrentConnection -> ConnectionDB -> IO ()
 runClient selfId conn db = do
     forever $ getLine >>=
               (handleCommand selfId conn db . command)
 
-
 handleCommand :: ServerId -> CurrentConnection -> ConnectionDB -> Either String Command -> IO ()
 handleCommand _ _ _ (Left e) = putStrLn e
 handleCommand selfId conn connDB (Right c) = handle c
-  where handle (Message s) = sendMessage conn (Msg selfId s)
-        handle (Add c) = addConnection connDB c >> connectToServer conn c
-        handle (Switch name) = switchConnection connDB conn name
+  where handle (Message s) = void $ sendMessage conn (Msg selfId s)
+        handle (Add c) = addConnection connDB c >> connectToServer conn c >> handshake selfId conn connDB (name c)
+        handle (Switch name) = switchConnection connDB conn name >> handshake selfId conn connDB name
         handle (Remove name) = removeConnection connDB name
         handle Quit = exitSuccess
 
-sendMessage :: CurrentConnection -> Payload -> IO ()
+sendMessage :: CurrentConnection -> Payload -> IO (Maybe ())
 sendMessage conn payload = withServer conn $ (flip hPutStrLn) (encode payload)
 
 addConnection :: ConnectionDB -> Connection -> IO ()
@@ -47,8 +46,25 @@ connectToServer conn (Connection { addr = a, port = p }) =
     newServer >>= atomically . writeTVar conn . Just
   where newServer = connectTo a p
 
-withServer :: CurrentConnection -> (Handle -> IO ()) -> IO ()
-withServer s action = (atomically $ readTVar s) >>= mapM_ action
+handshake :: ServerId -> CurrentConnection -> ConnectionDB -> ConnectionName ->  IO ()
+handshake id conn db name =
+    let
+      payload = liftM ((=<<) decode)
+                      (sendMessage conn (Handshake id)
+                        >> withServer conn hGetLine) :: IO (Maybe Payload)
+    in
+      void $ payload >>= sequence . (fmap updateId)
+    where
+      updateId (Handshake id) = updateConnectionDB db (setId name id)
+      updateId (Msg id _) = updateConnectionDB db (setId name id)
+      setId n i d = Map.update (\r -> Just $ r { serverId = (Just i) }) n d
+
+withServer :: CurrentConnection -> (Handle -> IO a) -> IO (Maybe a)
+withServer s action =
+    let
+      handle = (atomically $ readTVar s) :: (IO (Maybe Handle))
+    in
+      join $ sequence <$> (liftM . fmap) action handle
 
 updateConnectionDB :: ConnectionDB -> (ConnectionMap -> ConnectionMap) -> IO ()
 updateConnectionDB db f = atomically $ f <$> readTVar db >>= writeTVar db
