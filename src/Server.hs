@@ -7,16 +7,24 @@ import Control.Monad
 import Network
 import System.IO
 import Models
+import Messages (decode, encode)
 
 runServer :: ServerId -> CurrentConnection -> ConnectionDB -> IO ()
-runServer _ _ _ = do
+runServer selfId _ _ = do
   sock <- listenOn defaultPort
   forever $ do
      (handle, host, port) <- accept sock
-     forkFinally (talk handle) (\_ -> hClose handle)
+     forkFinally (talk selfId handle) (\_ -> hClose handle)
 
-talk :: Handle -> IO ()
-talk h = do
+talk :: ServerId -> Handle -> IO ()
+talk selfId h = do
     hSetBuffering h LineBuffering
     forever $ do
-      hGetLine h >>= putStrLn
+      hGetLine h >>= (handleMessage selfId h)
+
+handleMessage :: ServerId -> Handle -> String -> IO ()
+handleMessage selfId h msg =
+    case decode msg of
+      Just (Handshake id) -> hPutStrLn h (encode $ Handshake selfId)
+      Just (Msg id msg) -> putStrLn msg
+      Nothing -> return ()
