@@ -42,8 +42,8 @@ switchConnection db curr name = (newConn db name) >>= mapM_ (connectToServer cur
   where newConn db name = atomically (Map.lookup name <$> readTVar db)
 
 connectToServer :: CurrentConnection -> Connection -> IO ()
-connectToServer conn (Connection { addr = a, port = p }) =
-    newServer >>= atomically . writeTVar conn . Just
+connectToServer conn (Connection { addr = a, port = p, name = n }) =
+    newServer >>= atomically . writeTVar conn . Just . ((,) n)
   where newServer = connectTo a p
 
 handshake :: ServerId -> CurrentConnection -> ConnectionDB -> ConnectionName ->  IO ()
@@ -62,7 +62,7 @@ handshake id conn db name =
 withServer :: CurrentConnection -> (Handle -> IO a) -> IO (Maybe a)
 withServer s action =
     let
-      handle = (atomically $ readTVar s) :: (IO (Maybe Handle))
+      handle = atomically $ fmap (fmap snd) (readTVar s) :: IO (Maybe Handle)
     in
       join $ sequence <$> (liftM . fmap) action handle
 

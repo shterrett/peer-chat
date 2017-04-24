@@ -16,7 +16,7 @@ data Connection =
                }
     deriving(Eq, Show)
 
-type CurrentConnection = TVar (Maybe Handle)
+type CurrentConnection = TVar (Maybe (ConnectionName, Handle))
 
 type ConnectionMap = Map.Map ConnectionName Connection
 
