@@ -38,8 +38,8 @@ printOrQueue conn db qs id msg = do
     case currId of
       Just cid -> if cid == id
                   then putStrLn msg
-                  else return ()
-      Nothing -> return ()
+                  else enqueueMessage qs id msg
+      Nothing -> enqueueMessage qs id msg
 
 currentServerId :: CurrentConnection -> ConnectionDB -> IO (Maybe ServerId)
 currentServerId conn db =
@@ -48,3 +48,7 @@ currentServerId conn db =
   where
     currentConnectionName = atomically $ (fmap fst) <$> readTVar conn :: IO (Maybe ConnectionName)
     connectionId name = atomically $ (\map -> (Map.lookup name map) >>= serverId) <$> readTVar db :: IO (Maybe ServerId)
+
+enqueueMessage :: MessageQueues -> ServerId -> String -> IO ()
+enqueueMessage qs id msg = atomically $ (updateWithMsg) <$> readTVar qs >>= writeTVar qs
+  where updateWithMsg = Map.insertWith (flip (++)) id [msg]
