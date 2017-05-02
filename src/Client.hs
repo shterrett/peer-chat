@@ -13,18 +13,24 @@ import Control.Concurrent.STM.TVar
 import Models
 import Commands (Command(Message, Add, Switch, Remove, Quit), command)
 import Messages (encode, decode)
+import Utils
 
 runClient :: ServerId -> CurrentConnection -> ConnectionDB -> MessageQueues -> IO ()
 runClient selfId conn db qs = do
     forever $ getLine >>=
-              (handleCommand selfId conn db . command)
+              (handleCommand selfId conn db qs . command)
 
-handleCommand :: ServerId -> CurrentConnection -> ConnectionDB -> Either String Command -> IO ()
-handleCommand _ _ _ (Left e) = putStrLn e
-handleCommand selfId conn connDB (Right c) = handle c
+handleCommand :: ServerId -> CurrentConnection -> ConnectionDB -> MessageQueues -> Either String Command -> IO ()
+handleCommand _ _ _ _ (Left e) = putStrLn e
+handleCommand selfId conn connDB qs (Right c) = handle c
   where handle (Message s) = void $ sendMessage conn (Msg selfId s)
-        handle (Add c) = addConnection connDB c >> connectToServer conn c >> handshake selfId conn connDB (name c)
-        handle (Switch name) = switchConnection connDB conn name >> handshake selfId conn connDB name
+        handle (Add c) = addConnection connDB c
+                         >> connectToServer conn c
+                         >> handshake selfId conn connDB (name c)
+                         >> dequeueMessages conn connDB qs
+        handle (Switch name) = switchConnection connDB conn name
+                               >> handshake selfId conn connDB name
+                               >> dequeueMessages conn connDB qs
         handle (Remove name) = removeConnection connDB name
         handle Quit = exitSuccess
 
@@ -68,3 +74,16 @@ withServer s action =
 
 updateConnectionDB :: ConnectionDB -> (ConnectionMap -> ConnectionMap) -> IO ()
 updateConnectionDB db f = atomically $ f <$> readTVar db >>= writeTVar db
+
+dequeueMessages :: CurrentConnection -> ConnectionDB -> MessageQueues -> IO ()
+dequeueMessages conn db qs = do
+    currId <- currentServerId conn db
+    case currId of
+      Just id -> printExisting id qs >> clearExisting id qs
+      Nothing -> return ()
+
+printExisting :: ServerId -> MessageQueues -> IO ()
+printExisting id qs = (atomically $ (Map.findWithDefault [] id) <$> readTVar qs) >>= (putStrLn . unlines)
+
+clearExisting :: ServerId -> MessageQueues -> IO ()
+clearExisting id qs = atomically $ (Map.delete id) <$> readTVar qs >>= writeTVar qs

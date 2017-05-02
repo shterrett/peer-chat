@@ -11,6 +11,7 @@ import Network
 import System.IO
 import Models
 import Messages (decode, encode)
+import Utils
 
 runServer :: ServerId -> CurrentConnection -> ConnectionDB -> MessageQueues -> IO ()
 runServer selfId conn db qs = do
@@ -40,14 +41,6 @@ printOrQueue conn db qs id msg = do
                   then putStrLn msg
                   else enqueueMessage qs id msg
       Nothing -> enqueueMessage qs id msg
-
-currentServerId :: CurrentConnection -> ConnectionDB -> IO (Maybe ServerId)
-currentServerId conn db =
-    currentConnectionName >>=
-      (\mn -> join <$> sequence (connectionId <$> mn))
-  where
-    currentConnectionName = atomically $ (fmap fst) <$> readTVar conn :: IO (Maybe ConnectionName)
-    connectionId name = atomically $ (\map -> (Map.lookup name map) >>= serverId) <$> readTVar db :: IO (Maybe ServerId)
 
 enqueueMessage :: MessageQueues -> ServerId -> String -> IO ()
 enqueueMessage qs id msg = atomically $ (updateWithMsg) <$> readTVar qs >>= writeTVar qs
