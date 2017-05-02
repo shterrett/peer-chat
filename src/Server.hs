@@ -43,5 +43,5 @@ printOrQueue conn db qs id msg = do
       Nothing -> enqueueMessage qs id msg
 
 enqueueMessage :: MessageQueues -> ServerId -> String -> IO ()
-enqueueMessage qs id msg = atomically $ (updateWithMsg) <$> readTVar qs >>= writeTVar qs
+enqueueMessage qs id msg = updateMap qs updateWithMsg
   where updateWithMsg = Map.insertWith (flip (++)) id [msg]

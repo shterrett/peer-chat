@@ -38,10 +38,10 @@ sendMessage :: CurrentConnection -> Payload -> IO (Maybe ())
 sendMessage conn payload = withServer conn $ (flip hPutStrLn) (encode payload)
 
 addConnection :: ConnectionDB -> Connection -> IO ()
-addConnection db new = updateConnectionDB db (Map.insert (name new) new)
+addConnection db new = updateMap db (Map.insert (name new) new)
 
 removeConnection :: ConnectionDB -> ConnectionName -> IO ()
-removeConnection db name = updateConnectionDB db (Map.delete name)
+removeConnection db name = updateMap db (Map.delete name)
 
 switchConnection :: ConnectionDB -> CurrentConnection -> ConnectionName -> IO ()
 switchConnection db curr name = (newConn db name) >>= mapM_ (connectToServer curr)
@@ -61,8 +61,8 @@ handshake id conn db name =
     in
       void $ payload >>= sequence . (fmap updateId)
     where
-      updateId (Handshake id) = updateConnectionDB db (setId name id)
-      updateId (Msg id _) = updateConnectionDB db (setId name id)
+      updateId (Handshake id) = updateMap db (setId name id)
+      updateId (Msg id _) = updateMap db (setId name id)
       setId n i d = Map.update (\r -> Just $ r { serverId = (Just i) }) n d
 
 withServer :: CurrentConnection -> (Handle -> IO a) -> IO (Maybe a)
@@ -71,9 +71,6 @@ withServer s action =
       handle = atomically $ fmap (fmap snd) (readTVar s) :: IO (Maybe Handle)
     in
       join $ sequence <$> (liftM . fmap) action handle
-
-updateConnectionDB :: ConnectionDB -> (ConnectionMap -> ConnectionMap) -> IO ()
-updateConnectionDB db f = atomically $ f <$> readTVar db >>= writeTVar db
 
 dequeueMessages :: CurrentConnection -> ConnectionDB -> MessageQueues -> IO ()
 dequeueMessages conn db qs = do
@@ -86,4 +83,4 @@ printExisting :: ServerId -> MessageQueues -> IO ()
 printExisting id qs = (atomically $ (Map.findWithDefault [] id) <$> readTVar qs) >>= (putStrLn . unlines)
 
 clearExisting :: ServerId -> MessageQueues -> IO ()
-clearExisting id qs = atomically $ (Map.delete id) <$> readTVar qs >>= writeTVar qs
+clearExisting id qs = updateMap qs $ Map.delete id

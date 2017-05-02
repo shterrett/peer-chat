@@ -13,3 +13,6 @@ currentServerId conn db =
   where
     currentConnectionName = atomically $ (fmap fst) <$> readTVar conn :: IO (Maybe ConnectionName)
     connectionId name = atomically $ (\map -> (Map.lookup name map) >>= serverId) <$> readTVar db :: IO (Maybe ServerId)
+
+updateMap :: Ord k => TVar (Map.Map k v) -> (Map.Map k v -> Map.Map k v) -> IO ()
+updateMap m f = atomically $ f <$> readTVar m >>= writeTVar m
