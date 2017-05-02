@@ -9,8 +9,8 @@ import System.IO
 import Models
 import Messages (decode, encode)
 
-runServer :: ServerId -> CurrentConnection -> ConnectionDB -> IO ()
-runServer selfId _ _ = do
+runServer :: ServerId -> CurrentConnection -> ConnectionDB -> MessageQueues -> IO ()
+runServer selfId _ _ _ = do
   sock <- listenOn defaultPort
   forever $ do
      (handle, host, port) <- accept sock

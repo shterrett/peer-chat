@@ -12,5 +12,6 @@ main :: IO ()
 main = do
     conn <- newTVarIO Nothing
     connDB <- newTVarIO (Map.empty)
+    msgQ <- newTVarIO (Map.empty)
     selfId <- UUID.nextRandom
-    (forkIO $ runServer selfId conn connDB) >> runClient selfId conn connDB
+    (forkIO $ runServer selfId conn connDB msgQ) >> runClient selfId conn connDB msgQ

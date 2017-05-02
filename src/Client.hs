@@ -14,8 +14,8 @@ import Models
 import Commands (Command(Message, Add, Switch, Remove, Quit), command)
 import Messages (encode, decode)
 
-runClient :: ServerId -> CurrentConnection -> ConnectionDB -> IO ()
-runClient selfId conn db = do
+runClient :: ServerId -> CurrentConnection -> ConnectionDB -> MessageQueues -> IO ()
+runClient selfId conn db qs = do
     forever $ getLine >>=
               (handleCommand selfId conn db . command)
 

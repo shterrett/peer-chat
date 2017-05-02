@@ -29,3 +29,5 @@ data Payload =
 
 defaultPort :: PortID
 defaultPort = PortNumber 90909
+
+type MessageQueues = TVar (Map.Map ServerId [String])
